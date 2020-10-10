@@ -1,10 +1,11 @@
 {-# LANGUAGE RecordWildCards #-}
 module Ray (Ray (..), position, transformRay) where
 
-import Linear
+import Matrix
+import Vectors
 import Types (Number)
 
-data Ray = Ray { rayOrigin :: V4 Number, rayDirection :: V4 Number} deriving Show
+data Ray = Ray { rayOrigin :: !(V4 Number), rayDirection :: !(V4 Number)} deriving Show
 
 position :: Ray -> Number -> V4 Number
 position Ray {..} t = rayOrigin ^+^ t *^ rayDirection

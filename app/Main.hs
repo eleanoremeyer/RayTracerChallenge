@@ -6,4 +6,4 @@ import Render
 import Codec.Picture
 
 main :: IO ()
-main = savePngImage "out.png" $ ImageRGB8 renderRaySphereIntersections
+main = savePngImage "out.png" $ ImageRGB8 renderLightAndShading

@@ -2,7 +2,7 @@
 
 module Matrix ( mkTranslation, mkScaling, mkRotationAroundX, mkRotationAroundY, mkRotationAroundZ
               , Transform, runTransform, translate, scale, rotateX, rotateY, rotateZ, shear
-              , M44, identity, (!*!), inv44)
+              , M44, identity, (!*!), inv44, (!*), transpose)
   where
 
 import Control.Monad.State.Strict

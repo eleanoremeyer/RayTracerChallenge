@@ -1,17 +1,24 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Object.Sphere (Sphere, unitSphere, transformSphere) where
 
+import Control.Lens
+
+import Material
 import Object
 import Vectors
 import Matrix
 import Types (Number)
 import Ray
 
-newtype Sphere = Sphere (M44 Number) deriving Show
+data Sphere = Sphere { _sphereTrans :: !(M44 Number), _sphereMaterial :: !Material }
+  deriving Show
+
+$(makeLenses ''Sphere)
 
 instance Object Sphere where
-  intersection ray (Sphere trans) =
+  intersection ray (Sphere trans _) =
     let Ray {..} = transformRay (inv44 trans) ray in
     let sphereToRay  = rayOrigin  - point (V3 0 0 0)
         a            = dot rayDirection rayDirection
@@ -25,8 +32,19 @@ instance Object Sphere where
       let sqrtDiscriminant = sqrt discriminant in
       [(-b - sqrtDiscriminant)/(2*a), (-b + sqrtDiscriminant)/(2*a)]
 
+  normalAt worldPoint (Sphere trans _) =
+    let objectPoint = inv44 trans !* worldPoint in
+    let objectNormal = objectPoint - point (V3 0 0 0) in
+    let worldNormal = transpose (inv44 trans) !* objectNormal in
+    normalize $ worldNormal & _w .~ 0
+
+  material = view sphereMaterial
+
+unitSphereWithMaterial :: Material -> Sphere
+unitSphereWithMaterial = Sphere identity
+
 unitSphere :: Sphere
-unitSphere = Sphere identity
+unitSphere = unitSphereWithMaterial defaultMaterial
 
 transformSphere :: M44 Number -> Sphere -> Sphere
-transformSphere trans' (Sphere trans) = Sphere (trans' !*! trans)
+transformSphere trans' = sphereTrans %~ (trans' !*!)

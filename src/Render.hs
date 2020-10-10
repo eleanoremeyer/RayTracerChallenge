@@ -1,11 +1,13 @@
 {-# LANGUAGE RecordWildCards #-}
 module Render ( renderDrawingCanvas
               , renderRaySphereIntersections
-              , renderMatrixTransformations) where
+              , renderMatrixTransformations
+              , renderLightAndShading) where
 
 import Types (Number)
 import Ray
 import Matrix
+import Light
 import Object
 import Control.Lens
 import Data.Maybe (catMaybes)
@@ -87,3 +89,45 @@ renderRaySphereIntersections =
     canvasPixels = 100 :: Int
     pixelSize = wallSize/fromIntegral canvasPixels
     halfWallSize = wallSize/2
+
+
+-- Chapter 6
+renderLightAndShading :: Image PixelRGB8
+renderLightAndShading =
+  genImageFlipped canvasPixels canvasPixels $ \x y ->
+    let worldX = pixelSize*fromIntegral x - halfWallSize in
+    let worldY = halfWallSize - pixelSize * fromIntegral y in
+    let ray = Ray rayOrig (normalize $ point (V3 worldX  worldY  wallZ) - rayOrig) in
+
+    renderMaybeIntersection ray $ \Intersection {..} ->
+      let point = position ray intersectionTime in
+      let normal = normalAt point intersectionObject in
+      let eye = -(rayDirection ray) in
+      let color = lighting (material intersectionObject) light point eye normal in
+      PixelRGB8
+        (computeColorValue $ color^._x)
+        (computeColorValue $ color^._y)
+        (computeColorValue $ color^._z)
+
+  where
+    computeColorValue :: Number -> Pixel8
+    computeColorValue i
+      | i<=0       = minBound
+      | i>=1       = maxBound
+      | otherwise  = round (fromIntegral (maxBound :: Pixel8) * i)
+
+    lightPosition = point $ V3 (-10) 10 (-10)
+    lightColour = V3 1 1 1
+    light = PointLight lightPosition lightColour
+    rayOrig = point $ V3 0 0 (-5)
+    wallZ = 10
+    wallSize = 7
+    canvasPixels = 1024 :: Int
+    pixelSize = wallSize/fromIntegral canvasPixels
+    halfWallSize = wallSize/2
+    sphere = flip transformSphere unitSphere $
+      runTransform $ do
+        pure ()
+        -- shear $ V3 (V2 1 0) (V2 0 0) (V2 0 0)
+        -- scale $ V3 0.5 1 1
+    renderMaybeIntersection ray handler = maybe (PixelRGB8 0 0 0) handler $ hit $ intersect ray sphere

@@ -2,7 +2,6 @@
 
 module GUI.Main where
 
-import Data.Maybe (fromJust)
 import Graphics.Gloss
 import Graphics.Gloss.Juicy
 import Codec.Picture

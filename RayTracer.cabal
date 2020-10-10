@@ -27,6 +27,8 @@ library
   exposed-modules:
       GUI.Main
       Lib
+      Light
+      Material
       Matrix
       Object
       Object.Sphere
