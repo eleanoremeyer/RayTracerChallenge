@@ -1,50 +1,49 @@
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
 
-module Object.Sphere (Sphere, unitSphere, transformSphere) where
+module Object.Sphere (unitSphere) where
 
-import Control.Lens
+import Control.Lens hiding (transform)
 
-import Material
-import Object
+import Types (Transformable (..), Number)
+import Object (ToObj (..), Obj (..))
 import Vectors
 import Matrix
-import Types (Number)
 import Ray
 
-data Sphere = Sphere { _sphereTrans :: !(M44 Number), _sphereInvTrans :: !(M44 Number), _sphereMaterial :: !Material }
-  deriving Show
+data Sphere = Sphere { trans :: M44 Number, invTrans :: M44 Number}
 
-$(makeLenses ''Sphere)
+intersection :: Sphere -> Ray -> [Number]
+intersection Sphere {..} ray =
+  let Ray {..} = transformRay invTrans ray in
+  let sphereToRay  = rayOrigin  - point (V3 0 0 0)
+      a            = dot rayDirection rayDirection
+      b            = 2 * dot rayDirection sphereToRay
+      c            = dot sphereToRay sphereToRay - 1
+      discriminant = b^(2::Int) - 4 * a * c
+  in
+  if discriminant < 0 then
+    []
+  else
+    let sqrtDiscriminant = sqrt discriminant in
+    [(-b - sqrtDiscriminant)/(2*a), (-b + sqrtDiscriminant)/(2*a)]
 
-instance Object Sphere where
-  intersection ray (Sphere trans invTrans _) =
-    let Ray {..} = transformRay invTrans ray in
-    let sphereToRay  = rayOrigin  - point (V3 0 0 0)
-        a            = dot rayDirection rayDirection
-        b            = 2 * dot rayDirection sphereToRay
-        c            = dot sphereToRay sphereToRay - 1
-        discriminant = b^(2::Int) - 4 * a * c
-    in
-    if discriminant < 0 then
-      []
-    else
-      let sqrtDiscriminant = sqrt discriminant in
-      [(-b - sqrtDiscriminant)/(2*a), (-b + sqrtDiscriminant)/(2*a)]
+instance Transformable Sphere where
+  transform trans' Sphere {..} = Sphere (trans' !*! trans) (invTrans !*! inv44 trans')
 
-  normalAt worldPoint (Sphere trans invTrans _) =
-    let objectPoint = invTrans !* worldPoint in
-    let objectNormal = objectPoint - point (V3 0 0 0) in
-    let worldNormal = transpose invTrans !* objectNormal in
-    normalize $ worldNormal & _w .~ 0
+normalAt :: Sphere -> V4 Number -> V4 Number
+normalAt Sphere {..} worldPoint =
+  let objectPoint = invTrans !* worldPoint in
+  let objectNormal = objectPoint - point (V3 0 0 0) in
+  let worldNormal = transpose invTrans !* objectNormal in
+  normalize $ worldNormal & _w .~ 0
 
-  material = view sphereMaterial
-
-unitSphereWithMaterial :: Material -> Sphere
-unitSphereWithMaterial = Sphere identity identity
 
 unitSphere :: Sphere
-unitSphere = unitSphereWithMaterial defaultMaterial
+unitSphere = Sphere identity identity
 
-transformSphere :: M44 Number -> Sphere -> Sphere
-transformSphere trans' = (sphereInvTrans %~ (!*! inv44 trans') ) . (sphereTrans %~ (trans' !*!))
+instance ToObj Sphere where
+  toObj mat sphere = Obj { _objIntersection = intersection sphere
+                         , _objNormalAt = normalAt sphere
+                         , _objMaterial = mat
+                         , _objTransform = toObj mat . flip transform sphere
+                         }

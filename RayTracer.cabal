@@ -36,6 +36,7 @@ library
       Render
       Types
       Vectors
+      World
   other-modules:
       Paths_RayTracer
   hs-source-dirs:

@@ -4,12 +4,12 @@ module Render ( renderDrawingCanvas
               , renderMatrixTransformations
               , renderLightAndShading) where
 
-import Types (Number)
+import Types
 import Ray
 import Matrix
 import Light
 import Object
-import Control.Lens
+import Control.Lens hiding (transform)
 import Data.Maybe (catMaybes)
 import Codec.Picture
 import Codec.Picture.Types
@@ -77,10 +77,11 @@ renderRaySphereIntersections =
     let worldX = pixelSize*fromIntegral x - halfWallSize in
     let worldY = halfWallSize - pixelSize * fromIntegral y in
     let ray = Ray rayOrig (point (V3 worldX  worldY  wallZ) - rayOrig) in
-    maybe (PixelRGB8 0 0 0) (const $ PixelRGB8 255 0 0) $ hit $ intersect ray $ flip transformSphere unitSphere $
-      runTransform $ do
-        shear $ V3 (V2 1 0) (V2 0 0) (V2 0 0)
-        scale $ V3 0.5 1 1
+    maybe (PixelRGB8 0 0 0) (const $ PixelRGB8 255 0 0) $ hit $ intersect ray $ toObj def $
+      flip transform unitSphere $
+        runTransform $ do
+          shear $ V3 (V2 1 0) (V2 0 0) (V2 0 0)
+          scale $ V3 0.5 1 1
 
   where
     rayOrig = point $ V3 0 0 (-5)
@@ -99,11 +100,11 @@ renderLightAndShading =
     let worldY = halfWallSize - pixelSize * fromIntegral y in
     let ray = Ray rayOrig (normalize $ point (V3 worldX  worldY  wallZ) - rayOrig) in
 
-    renderMaybeIntersection ray $ \Intersection {..} ->
-      let point = position ray intersectionTime in
-      let normal = normalAt point intersectionObject in
+    renderMaybeIntersection ray $ \inter ->
+      let point = position ray (inter^.time) in
+      let normal = (inter^.object.normalAt) point in
       let eye = -(rayDirection ray) in
-      let color = lighting (material intersectionObject) light point eye normal in
+      let color = lighting (inter^.object.material) light point eye normal in
       PixelRGB8
         (computeColorValue $ color^._x)
         (computeColorValue $ color^._y)
@@ -122,10 +123,10 @@ renderLightAndShading =
     rayOrig = point $ V3 0 0 (-5)
     wallZ = 10
     wallSize = 7
-    canvasPixels = 1024 :: Int
+    canvasPixels = 256 :: Int
     pixelSize = wallSize/fromIntegral canvasPixels
     halfWallSize = wallSize/2
-    sphere = flip transformSphere unitSphere $
+    sphere = toObj def $ flip transform unitSphere $
       runTransform $ do
         pure ()
         -- shear $ V3 (V2 1 0) (V2 0 0) (V2 0 0)

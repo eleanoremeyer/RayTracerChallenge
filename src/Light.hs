@@ -5,7 +5,7 @@ module Light (Light (..), lighting) where
 
 import Vectors
 import Object
-import Types (Number, Colour, Point, Vector)
+import Types
 import Material
 
 data Light = PointLight { lightPos :: !(V4 Number), lightIntensity :: !Colour }
