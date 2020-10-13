@@ -5,6 +5,7 @@ module Render ( renderDrawingCanvas
               , renderLightAndShading) where
 
 import Types
+import Precomputation
 import Ray
 import Matrix
 import Light

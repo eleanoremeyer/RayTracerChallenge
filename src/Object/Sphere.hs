@@ -10,12 +10,12 @@ import Vectors
 import Matrix
 import Ray
 
-data Sphere = Sphere { trans :: M44 Number, invTrans :: M44 Number}
+data Sphere = Sphere { trans :: !(M44 Number), invTrans :: !(M44 Number)}
 
 intersection :: Sphere -> Ray -> [Number]
 intersection Sphere {..} ray =
   let Ray {..} = transformRay invTrans ray in
-  let sphereToRay  = rayOrigin  - point (V3 0 0 0)
+  let sphereToRay  = rayOrigin  - point 0 0 0
       a            = dot rayDirection rayDirection
       b            = 2 * dot rayDirection sphereToRay
       c            = dot sphereToRay sphereToRay - 1
@@ -33,7 +33,7 @@ instance Transformable Sphere where
 normalAt :: Sphere -> V4 Number -> V4 Number
 normalAt Sphere {..} worldPoint =
   let objectPoint = invTrans !* worldPoint in
-  let objectNormal = objectPoint - point (V3 0 0 0) in
+  let objectNormal = objectPoint - point 0 0 0 in
   let worldNormal = transpose invTrans !* objectNormal in
   normalize $ worldNormal & _w .~ 0
 
